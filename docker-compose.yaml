@@ -1,0 +1,146 @@
+version: "3.8"
+services:
+  main-service:
+    build:
+      context: ./main-service
+    hostname: main-service
+    restart: always
+    environment:
+      - MAIN_SERVICE_APP_NAME="Main service app"
+      - MAIN_SERVICE_APP_VERSION="Main service app version"
+      - MAIN_SERVICE_APP_PORT=8081
+      - TRINO_COORDINATOR_HOST=trino-coordinator
+      - TRINO_COORDINATOR_PORT=8080
+      - REDIS_PASSWORD=eYVX7EwVmmxKPCDmwMtyKVge8oLd2t81
+      - REDIS_PORT=6379
+      - REDIS_HOST=redis
+    ports:
+      - "8081:8081"
+    networks:
+      - trino-network
+    depends_on:
+      postgresql-service:
+        condition: service_started
+      mongo-service:
+        condition: service_started
+      redis:
+        condition: service_started
+
+  postgresql-service:
+    build:
+      context: ./postgresql-service
+    hostname: postgresql-service
+    restart: always
+    environment:
+      - POSTGRESQL_SERVICE_APP_NAME="Postgresql service app"
+      - POSTGRESQL_SERVICE_APP_VERSION="Postgresql service app version"
+      - POSTGRESQL_SERVICE_APP_PORT=8082
+    ports:
+      - "8082:8082"
+    networks:
+      - trino-network
+    depends_on:
+      postgresql-db:
+        condition: service_started
+
+  mongo-service:
+    build:
+      context: ./mongo-service
+    hostname: mongo-service
+    restart: always
+    environment:
+      - MONGO_SERVICE_APP_NAME="Mongo service app"
+      - MONGO_SERVICE_APP_VERSION="Mongo service app version"
+      - MONGO_SERVICE_APP_PORT=8083
+    ports:
+      - "8083:8083"
+    networks:
+      - trino-network
+    depends_on:
+      mongo-db:
+        condition: service_started
+
+  postgresql-db:
+    image: postgres:14.1-alpine
+    hostname: postgresql-db
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=test
+    ports:
+      - "5432:5432"
+    networks:
+      - trino-network
+
+  mongo-db:
+    image: "mongo:latest"
+    hostname: mongo-db
+    restart: always
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=mongo
+      - MONGO_INITDB_ROOT_PASSWORD=mongo
+    ports:
+      - "27017:27017"
+    networks:
+      - trino-network
+
+  redis:
+    image: redis:6.2-alpine
+    hostname: redis
+    restart: always
+    ports:
+      - "6379:6379"
+    expose:
+      - "6379"
+    command: redis-server --save 20 1 --loglevel warning --requirepass eYVX7EwVmmxKPCDmwMtyKVge8oLd2t81
+    networks:
+      - trino-network
+
+  trino-coordinator:
+    image: "trinodb/trino:381"
+    hostname: trino-coordinator
+    ports:
+      - "8080:8080"
+    expose:
+      - "8080"
+    networks:
+      - trino-network
+    volumes:
+      - ./trino-coordinator-conf:/etc/trino
+
+  trino-mongodb-worker:
+    image: "trinodb/trino:381"
+    hostname: trino-mongodb-worker
+    networks:
+      - trino-network
+    expose:
+      - "8080"
+    volumes:
+      - ./trino-mongodb-worker-conf:/etc/trino
+    depends_on:
+      mongo-db:
+        condition: service_started
+      trino-coordinator:
+        condition: service_healthy
+
+  trino-postgresql-worker:
+    image: "trinodb/trino:381"
+    hostname: trino-postgresql-worker
+    networks:
+      - trino-network
+    expose:
+      - "8080"
+    volumes:
+      - ./trino-postgresql-worker-conf:/etc/trino
+    depends_on:
+      postgresql-db:
+        condition: service_started
+      trino-coordinator:
+        condition: service_healthy
+
+networks:
+  trino-network:
+    driver: bridge
+
+
