@@ -6,12 +6,14 @@ from uuid import uuid4
 from app.services import (
     execute_trino_sql_statement as execute_trino_sql_statement_service,
     get_execution_query_result as get_execution_query_result_service,
+    get_execution_query_result_count as get_execution_query_result_count_service
 )
 from app.schemas import (
     Info as InfoSchema,
     TrinoExecutionStatus as TrinoExecutionStatusSchema,
     TrinoStatement as TrinoStatementSchema,
     TrinoExecutionResult as TrinoExecutionResultSchema,
+    TrinoExecutionResultCount as TrinoExecutionResultCountSchema
 )
 from app.settings import settings
 from app.dependencies import get_redis
@@ -44,6 +46,19 @@ async def trino_status(
     return await execute_trino_sql_statement_service(
         redis_client, trino_statement_schema.statement
     )
+
+
+@router.get(
+    "/trino/statements/executions/{execution_id}/count",
+    response_model=TrinoExecutionResultCountSchema,
+    tags=["trino"]
+)
+async def trino_execution_query_result_count(
+    execution_id: str, 
+    redis_client: Redis = Depends(get_redis)
+) -> TrinoExecutionResultCountSchema:
+    """Return the total amount of the execution results splits"""
+    return await get_execution_query_result_count_service(redis_client, execution_id)
 
 
 @router.get(

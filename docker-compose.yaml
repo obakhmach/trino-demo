@@ -109,30 +109,30 @@ services:
     volumes:
       - ./trino-coordinator-conf:/etc/trino
 
-  trino-mongodb-worker:
+  trino-worker-a:
     image: "trinodb/trino:381"
-    hostname: trino-mongodb-worker
+    hostname: trino-worker-a
     networks:
       - trino-network
     expose:
       - "8080"
     volumes:
-      - ./trino-mongodb-worker-conf:/etc/trino
+      - ./trino-worker-a-conf:/etc/trino
     depends_on:
       mongo-db:
         condition: service_started
       trino-coordinator:
         condition: service_healthy
 
-  trino-postgresql-worker:
+  trino-worker-b:
     image: "trinodb/trino:381"
-    hostname: trino-postgresql-worker
+    hostname: trino-worker-b
     networks:
       - trino-network
     expose:
       - "8080"
     volumes:
-      - ./trino-postgresql-worker-conf:/etc/trino
+      - ./trino-worker-b-conf:/etc/trino
     depends_on:
       postgresql-db:
         condition: service_started

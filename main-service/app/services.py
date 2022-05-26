@@ -7,7 +7,29 @@ from redis.asyncio import Redis
 from app.settings import settings
 from app.schemas import TrinoExecutionStatus as TrinoExecutionStatusSchema
 from app.schemas import TrinoExecutionResult as TrinoExecutionResultSchema
+from app.schemas import TrinoExecutionResultCount as TrinoExecutionResultCountSchema
 from app.schemas import TrinoExecutionStatuses
+
+
+async def get_execution_query_result_count(redis_client: Redis, execution_id: str) -> TrinoExecutionResultCountSchema:
+    """Query a Redis cache storage to find query result count corresponding given execution id and
+    execution set.
+
+    Args:
+        execution_id: An id of the hash map inside redis where related results were cahced.
+        redis_client: Async client to access redis cache storage.
+
+    Returns:
+        Number of sets cached after execution
+    """
+    query_result_exists: bool = bool(await redis_client.exists(execution_id))
+
+    if not query_result_exists:
+        raise Exception("Exception results are not preset.")
+
+    query_result_set_count: int = await redis_client.hlen(execution_id)
+
+    return TrinoExecutionResultCountSchema(count=query_result_set_count)
 
 
 async def get_execution_query_result(

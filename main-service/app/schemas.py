@@ -81,5 +81,14 @@ class TrinoExecutionResult(BaseModel):
         }
 
 
-class TrinoExecutionQueryResult(BaseModel):
-    """Model to keep all results received from cached storage of the trino statement execution."""
+class TrinoExecutionResultCount(BaseModel):
+    """Model to keep all results count received from cached storage of the trino statement execution."""
+
+    count: int = Field(...)
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "count": 10
+            }
+        }
